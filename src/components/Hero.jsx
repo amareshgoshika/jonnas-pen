@@ -26,8 +26,12 @@ const Hero = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="w-full bg-white shadow-md fixed top-0 left-0 z-10">
-        <h1 className="text-4xl font-bold text-gray-800 mt-4 text-center py-4" style={{ fontFamily: 'Zapfino', fontStyle: 'italic' }}>Jonna's Pen</h1>
+<div className="w-full bg-white shadow-md fixed top-0 left-0 z-10">
+        <Link to="/write-story">
+          <h1 className="text-4xl font-bold text-gray-800 mt-4 text-center py-4" style={{ fontFamily: 'Zapfino', fontStyle: 'italic' }}>
+            Jonna's Pen
+          </h1>
+        </Link>
       </div>
 
       <div className="pt-24 grid grid-cols-1 md:grid-cols-1 gap-6 w-[90%] max-w-6xl mx-auto">
