@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, addDoc, query, orderBy, getDocs } from "firebase/firestore";
 import { app } from "../firebase-config";
-import authorImage from "../assets/sandhya.jpeg"
+import authorImage from "../assets/sandhya.jpeg";
 
 const StoryPage = () => {
   const { id } = useParams(); // Capture the ID from the URL
   const [story, setStory] = useState(null); // Store story data from Firebase
+  const [comments, setComments] = useState([]); // Store comments for the story
+  const [newComment, setNewComment] = useState(""); // New comment input state
   const [loading, setLoading] = useState(true); // State for loading status
   const [error, setError] = useState(null); // State for error handling
 
   useEffect(() => {
     const db = getFirestore(app);
-    const docRef = doc(db, "stories", id); // Assuming your collection name is "stories"
-    
-    // Log the ID to check if it's correct
-    console.log("Fetching story with ID:", id);
+    const docRef = doc(db, "stories", id); // Reference to the specific story
 
-    // Fetch the document from Firestore
+    // Fetch the story and comments
     const fetchStory = async () => {
       try {
         const docSnap = await getDoc(docRef);
@@ -25,29 +24,71 @@ const StoryPage = () => {
           setStory(docSnap.data()); // Set the story data into state
         } else {
           setError("Story not found");
-          console.log("No such document!");
         }
       } catch (error) {
         setError("Error fetching story: " + error.message);
-        console.error("Error fetching story:", error);
-      } finally {
-        setLoading(false); // Set loading to false once the data is fetched
       }
     };
-    
+
+    // Fetch comments from the "comments" collection
+    const fetchComments = async () => {
+      try {
+        const commentsRef = collection(db, "comments");
+        const q = query(commentsRef, orderBy("timestamp"));
+        const querySnapshot = await getDocs(q);
+        const commentsArray = [];
+        querySnapshot.forEach((doc) => {
+          commentsArray.push({ id: doc.id, ...doc.data() });
+        });
+        setComments(commentsArray); // Set the comments into state
+      } catch (error) {
+        setError("Error fetching comments: " + error.message);
+      }
+    };
+
     fetchStory();
-  }, [id]); // Fetch the story when the ID changes
+    fetchComments();
+    setLoading(false);
+  }, [id]);
+
+  // Handle new comment submission
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return; // Do not submit if comment is empty
+
+    const db = getFirestore(app);
+    try {
+      // Add new comment to the "comments" collection in Firestore
+      await addDoc(collection(db, "comments"), {
+        storyId: id,
+        comment: newComment,
+        timestamp: new Date(),
+      });
+      setNewComment(""); // Clear the comment input after submission
+      // Re-fetch comments after submitting
+      const commentsRef = collection(db, "comments");
+      const q = query(commentsRef, orderBy("timestamp"));
+      const querySnapshot = await getDocs(q);
+      const commentsArray = [];
+      querySnapshot.forEach((doc) => {
+        commentsArray.push({ id: doc.id, ...doc.data() });
+      });
+      setComments(commentsArray); // Update the comments state
+    } catch (error) {
+      setError("Error submitting comment: " + error.message);
+    }
+  };
 
   if (loading) {
-    return <div>Loading...</div>; // Display loading state
+    return <div>Loading...</div>;
   }
 
   if (error) {
-    return <div>{error}</div>; // Display error message
+    return <div>{error}</div>;
   }
 
   if (!story) {
-    return <div>Story not found</div>; // Handle case if no story is returned
+    return <div>Story not found</div>;
   }
 
   return (
@@ -62,7 +103,7 @@ const StoryPage = () => {
         <div className="bg-white shadow-md rounded-lg p-6 flex flex-col">
           <div className="flex items-center mb-4">
             <img
-              src={authorImage} // Assuming you have authorImage in Firestore
+              src={authorImage}
               alt={story.authorName}
               className="w-10 h-10 rounded-full mr-4"
             />
@@ -76,6 +117,42 @@ const StoryPage = () => {
           <p className="text-gray-600 mb-4">{story.description}</p>
           
           <p className="text-gray-600">{story.fullStory}</p>
+        </div>
+
+        {/* Comments Section */}
+        <div className="mt-6">
+          <h2 className="text-2xl font-semibold text-gray-800">Comments</h2>
+
+          {/* Display comments */}
+          <div className="mt-4">
+            {comments.length > 0 ? (
+              comments.map((comment) => (
+                <div key={comment.id} className="bg-white shadow-md p-4 rounded-lg mb-4">
+                  <p className="text-gray-600">{comment.comment}</p>
+                  <p className="text-xs text-gray-400">{new Date(comment.timestamp.seconds * 1000).toLocaleString()}</p>
+                </div>
+              ))
+            ) : (
+              <p>No comments yet.</p>
+            )}
+          </div>
+
+          {/* Comment input */}
+          <form onSubmit={handleCommentSubmit} className="mt-4">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              rows="4"
+              className="w-full p-2 border rounded-lg"
+              placeholder="Write your comment..."
+            ></textarea>
+            <button
+              type="submit"
+              className="w-full py-2 mt-4 text-white rounded-lg bg-blue-500 hover:bg-blue-600"
+            >
+              Submit Comment
+            </button>
+          </form>
         </div>
       </div>
     </div>

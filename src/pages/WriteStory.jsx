@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { db } from "../firebase-config"; // Firebase config file
-import { collection, addDoc } from "firebase/firestore"; // Firebase Firestore functions
+import { collection, addDoc, getDoc, doc } from "firebase/firestore"; // Firebase Firestore functions
 
 const WriteStory = () => {
   // Define state for the form fields
@@ -10,6 +10,8 @@ const WriteStory = () => {
   const [authorName, setAuthorName] = useState("");
   const [date, setDate] = useState("");
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState(""); // New state for password
+  const [passwordError, setPasswordError] = useState(""); // State to track password error
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -17,6 +19,23 @@ const WriteStory = () => {
     setLoading(true);
 
     try {
+      // Fetch stored password from Firestore
+      const passwordDoc = await getDoc(doc(db, "settings", "password")); // assuming the password is stored in the "settings" collection
+      if (passwordDoc.exists()) {
+        const storedPassword = passwordDoc.data().password;
+
+        // Verify the entered password
+        if (password !== storedPassword) {
+          setPasswordError("Incorrect password!");
+          setLoading(false);
+          return;
+        }
+      } else {
+        console.error("Password document not found.");
+        setLoading(false);
+        return;
+      }
+
       // Add new document to the "stories" collection in Firestore
       await addDoc(collection(db, "stories"), {
         title,
@@ -32,6 +51,7 @@ const WriteStory = () => {
       setFullStory("");
       setAuthorName("");
       setDate("");
+      setPassword(""); // Clear password input
 
       setLoading(false);
       alert("Story saved successfully!");
@@ -106,6 +126,20 @@ const WriteStory = () => {
               required
               className="w-full px-4 py-2 mt-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          {/* Password Field */}
+          <div className="mb-4">
+            <label htmlFor="password" className="block text-gray-700 text-lg">Password</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-2 mt-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
           </div>
 
           <button
