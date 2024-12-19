@@ -15,16 +15,13 @@ const StoryPage = () => {
   useEffect(() => {
     const db = getFirestore(app);
     const docRef = doc(db, "stories", id); // Reference to the specific story
-
     const fetchStory = async () => {
       try {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const storyData = docSnap.data();
           setStory(storyData); // Set the story data into state
-  
-          // Increment the read count
-          await updateDoc(docRef, {
+            await updateDoc(docRef, {
             reads: storyData.reads ? storyData.reads + 1 : 1,
           });
         } else {
