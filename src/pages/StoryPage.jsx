@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getFirestore, doc, getDoc, collection, addDoc, query, orderBy, getDocs } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, addDoc, query, orderBy, getDocs, updateDoc } from "firebase/firestore";
 import { app } from "../firebase-config";
 import authorImage from "../assets/sandhya.jpeg";
 
@@ -16,12 +16,17 @@ const StoryPage = () => {
     const db = getFirestore(app);
     const docRef = doc(db, "stories", id); // Reference to the specific story
 
-    // Fetch the story and comments
     const fetchStory = async () => {
       try {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setStory(docSnap.data()); // Set the story data into state
+          const storyData = docSnap.data();
+          setStory(storyData); // Set the story data into state
+  
+          // Increment the read count
+          await updateDoc(docRef, {
+            reads: storyData.reads ? storyData.reads + 1 : 1,
+          });
         } else {
           setError("Story not found");
         }
